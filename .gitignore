@@ -1,0 +1,43 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl
+
+# Terraform State Files
+*.tfstate
+*.tfstate.*
+crash.log
+
+# Terraform Plan Files
+*.tfplan
+*.plan
+
+# Variable Files (may contain secrets)
+*.auto.tfvars
+terraform.tfvars
+*.tfvars
+
+# Sensitive Output Files
+*.pem
+*.key
+
+# Override Files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Environment Files
+.env
+.env.*
+
+# VS Code
+.vscode/
+
+# IntelliJ
+.idea/
+
+# MacOS
+.DS_Store
+
+# Logs
+*.log
