@@ -1,0 +1,67 @@
+name: Deploy Cricket App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Install Backend
+      run: |
+        cd Cricket-backend
+        npm install
+
+    - name: Install Frontend
+      run: |
+        cd Cricket-frontend
+        npm install
+        npm run build
+
+    - name: Install Admin
+      run: |
+        cd Cricket-Admin
+        npm install
+        npm run build
+
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USERNAME }}
+        key: ${{ secrets.SERVER_KEY }}
+
+        script: |
+          cd /home/ubuntu/ecommerce-cicd-github-actions
+
+          git pull origin main
+
+          cd Cricket-backend
+          npm install
+
+          pm2 restart cricket-backend
+
+          cd ../Cricket-frontend
+          npm install
+          npm run build
+
+          pm2 restart cricket-frontend
+
+          cd ../Cricket-Admin
+          npm install
+          npm run build
+
+          pm2 restart cricket-admin
+
+          pm2 save
