@@ -4,9 +4,9 @@ WORKDIR /app
 
 COPY Cricket-backend/package*.json ./
 
-COPY Cricket-backend/ .
-
 RUN npm install
+
+COPY Cricket-backend/ .
 
 EXPOSE 5000
 
