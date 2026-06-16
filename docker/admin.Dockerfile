@@ -6,7 +6,7 @@ COPY Cricket-Admin/package*.json ./
 
 RUN npm install
 
-COPY Cricket-admin/ .
+COPY Cricket-Admin/ .
 
 RUN npm run build
 
