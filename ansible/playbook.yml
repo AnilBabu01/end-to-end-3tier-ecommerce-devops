@@ -1,0 +1,168 @@
+---
+- hosts: server
+  become: yes
+
+  tasks:
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install required packages
+      apt:
+        name:
+          - nginx
+          - docker.io
+          - postgresql
+          - postgresql-contrib
+          - git
+          - unzip
+          - curl
+          - nodejs
+          - npm
+          - python3-docker
+        state: present
+
+    - name: Start Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Start Nginx
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Create Jenkins Docker volume
+      shell: docker volume create jenkins_home
+      ignore_errors: yes
+
+    - name: Remove existing Jenkins container
+      shell: docker rm -f jenkins
+      ignore_errors: yes
+
+    - name: Run Jenkins container
+      shell: |
+        docker run -d \
+        --name jenkins \
+        --restart unless-stopped \
+        -p 8080:8080 \
+        -p 50000:50000 \
+        -v jenkins_home:/var/jenkins_home \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        jenkins/jenkins:lts-jdk21
+      ignore_errors: yes
+
+    - name: Install PM2 globally
+      shell: npm install -g pm2
+      ignore_errors: yes
+
+    - name: Create Nginx configuration
+      copy:
+        dest: /etc/nginx/sites-available/batbazar
+        content: |
+          server {
+              listen 80;
+              server_name ffindiano1.xyz;
+
+              location / {
+                  proxy_pass http://localhost:5173;
+                  proxy_http_version 1.1;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+          }
+
+          server {
+              listen 80;
+              server_name admin.ffindiano1.xyz;
+
+              location / {
+                  proxy_pass http://localhost:3000;
+                  proxy_http_version 1.1;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+          }
+
+          server {
+              listen 80;
+              server_name api.ffindiano1.xyz;
+
+              location / {
+                  proxy_pass http://localhost:5000;
+                  proxy_http_version 1.1;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+          }
+
+          server {
+              listen 80;
+              server_name jenkins.ffindiano1.xyz;
+
+              location / {
+                  proxy_pass http://localhost:8080;
+                  proxy_http_version 1.1;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+          }
+
+    - name: Enable BatBazar Nginx site
+      file:
+        src: /etc/nginx/sites-available/batbazar
+        dest: /etc/nginx/sites-enabled/batbazar
+        state: link
+        force: yes
+
+    - name: Remove default Nginx site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Test Nginx configuration
+      command: nginx -t
+      register: nginx_test
+      changed_when: false
+
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
+        enabled: yes
+
+    - name: Wait for Jenkins startup
+      pause:
+        seconds: 60
+
+    - name: Get Jenkins initial password
+      shell: docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+      register: jenkins_password
+      ignore_errors: yes
+
+    - name: Show Jenkins URL
+      debug:
+        msg: "Jenkins URL: http://13.201.20.57:8080"
+
+    - name: Show Jenkins Domain URL
+      debug:
+        msg: "Jenkins Domain: http://jenkins.ffindiano1.xyz"
+
+    - name: Show Jenkins Username
+      debug:
+        msg: "Username: admin"
+
+    - name: Show Jenkins Password
+      debug:
+        msg: "{{ jenkins_password.stdout }}"

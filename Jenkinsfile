@@ -1,69 +1,81 @@
 pipeline {
-    agent any
 
-    environment {
-        // Defines the SSH credential ID set up in Jenkins
-        SSH_CRED_ID = 'ec2-server-key' 
-        SERVER_USER = 'ubuntu'
-        SERVER_HOST = 'your-ec2-ip-or-domain' // Replace with your EC2 IP
+  agent any
+
+  environment {
+
+      DOCKER_USER='dockerhubuser'
+      FRONTEND='cricket-frontend'
+      ADMIN='cricket-admin'
+      BACKEND='cricket-backend'
+  }
+
+  stages {
+
+    stage('Clone') {
+      steps {
+        git branch: 'main',
+        url: 'https://github.com/user/repo.git'
+      }
     }
 
-    triggers {
-        // Triggers the pipeline automatically when a push happens on the main branch
-        githubPush() 
+    stage('Build') {
+      steps {
+
+        sh '''
+        docker build -t $DOCKER_USER/$FRONTEND frontend/
+        docker build -t $DOCKER_USER/$ADMIN admin/
+        docker build -t $DOCKER_USER/$BACKEND backend/
+        '''
+      }
     }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                // Pulls the latest code from your repository
-                checkout scm
-            }
-        }
+    stage('Push') {
+      steps {
 
-        stage('Deploy to EC2') {
-            steps {
-                // Uses the Jenkins SSH Agent plugin to securely handle your private key
-                sshagent(credentials: [env.SSH_CRED_ID]) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ${env.SERVER_USER}@${env.SERVER_HOST} '
-                            cd /home/ubuntu/ecommerce-cicd-github-actions
-
-                            echo "Pulling latest code from main..."
-                            git pull origin main
-
-                            echo "Updating Backend..."
-                            cd Cricket-backend
-                            npm install
-                            pm2 restart cricket-backend
-
-                            echo "Updating Frontend..."
-                            cd ../Cricket-frontend
-                            npm install
-                            npm run build
-                            pm2 restart cricket-frontend
-
-                            echo "Updating Admin..."
-                            cd ../Cricket-Admin
-                            npm install
-                            npm run build
-                            pm2 restart cricket-admin
-
-                            echo "Saving PM2 state..."
-                            pm2 save
-                        '
-                    """
-                }
-            }
-        }
+        sh '''
+        docker push $DOCKER_USER/$FRONTEND
+        docker push $DOCKER_USER/$ADMIN
+        docker push $DOCKER_USER/$BACKEND
+        '''
+      }
     }
 
-    post {
-        success {
-            echo 'Deployment completed successfully!'
-        }
-        failure {
-            echo 'Deployment failed. Check the logs above.'
-        }
+    stage('Deploy') {
+
+      steps {
+
+        sh '''
+
+        docker pull $DOCKER_USER/$FRONTEND
+        docker pull $DOCKER_USER/$ADMIN
+        docker pull $DOCKER_USER/$BACKEND
+
+        docker stop frontend || true
+        docker stop admin || true
+        docker stop backend || true
+
+        docker rm frontend || true
+        docker rm admin || true
+        docker rm backend || true
+
+        docker run -d \
+        --name frontend \
+        -p 3000:3000 \
+        $DOCKER_USER/$FRONTEND
+
+        docker run -d \
+        --name admin \
+        -p 3001:3001 \
+        $DOCKER_USER/$ADMIN
+
+        docker run -d \
+        --name backend \
+        -p 5000:5000 \
+        $DOCKER_USER/$BACKEND
+
+        '''
+      }
     }
+  }
 }
