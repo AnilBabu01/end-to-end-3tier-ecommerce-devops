@@ -2,7 +2,9 @@ FROM node:22
 
 WORKDIR /app
 
-COPY . .
+COPY Cricket-backend/package*.json ./
+
+COPY Cricket-backend/ .
 
 RUN npm install
 
