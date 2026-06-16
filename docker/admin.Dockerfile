@@ -2,7 +2,7 @@ FROM node:22
 
 WORKDIR /app
 
-COPY Cricket-admin/package*.json ./
+COPY Cricket-Admin/package*.json ./
 
 RUN npm install
 
