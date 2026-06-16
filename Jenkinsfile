@@ -41,9 +41,9 @@ pipeline {
             steps {
 
                 sh '''
-                docker build -f docker/frontend.Dockerfile -t $DOCKER_USER/$FRONTEND:latest .
-                docker build -f docker/admin.Dockerfile -t $DOCKER_USER/$ADMIN:latest .
-                docker build -f docker/backend.Dockerfile -t $DOCKER_USER/$API:latest .
+                docker buildx build -f docker/frontend.Dockerfile -t $DOCKER_USER/$FRONTEND:latest .
+                docker buildx build -f docker/admin.Dockerfile -t $DOCKER_USER/$ADMIN:latest .
+                docker buildx build -f docker/backend.Dockerfile -t $DOCKER_USER/$API:latest .
                 '''
             }
         }
