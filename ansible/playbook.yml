@@ -153,7 +153,7 @@
 
     - name: Show Jenkins URL
       debug:
-        msg: "Jenkins URL: http://13.201.20.57:8080"
+        msg: "Jenkins URL: http://13.232.42.7:8080"
 
     - name: Show Jenkins Domain URL
       debug:
